@@ -1,3 +1,3 @@
-export function index() {
-  console.log("q");
+export function hello(name = "world") {
+  return `Hello, ${name}!`;
 }

@@ -9,9 +9,17 @@
 [![Changelog](https://img.shields.io/badge/changelog-%F0%9F%93%9D-blue)](https://github.com/ColorlabHQ/picocache/blob/main/CHANGELOG.md)
 ---
 
-一个轻量、易用的浏览器端缓存库，基于 `localStorage` 和 `sessionStorage`，提供统一的缓存 API。
+一个轻量、易用的浏览器端缓存库，基于 `localStorage` 和 `sessionStorage`，提供统一、简洁的缓存 API。设计灵感来源于 PHP 框架 [ThinkPHP](https://github.com/top-think/framework) 的[缓存组件](https://doc.thinkphp.cn/v8_0/caches.html)，采用熟悉的缓存操作方式，让前端开发也能享受类似服务端缓存的开发体验。
 
-支持缓存过期、自增自减、默认值、`remember`、标签缓存以及缓存驱动切换，同时提供函数式和面向对象两种调用方式。
+## 特性
+
+- 🚀 零依赖
+- 📦 极小体积（minified + brotli ≤ 0.6KB）
+- ✨ 简洁统一的缓存 API
+- 💾 支持 localStorage / sessionStorage 多种存储驱动
+- ⏱️ 支持 TTL 缓存过期管理
+- 🏷️ 支持缓存标签，实现缓存分组与批量清理
+- 🧩 支持创建多个独立缓存实例
 
 ## 安装
 
@@ -27,25 +35,40 @@ npm install picocache
 <script src="https://unpkg.com/picocache@latest/dist/picocache.min.js"></script>
 ```
 
+## 快速开始
+
 ## 基本用法
 
 ```js
-// 这里以import为例导入
 import cache from "picocache";
 
-//助手函数用法
-cache("name", "jack"); // 设置缓存
-cache("name", "jack", 3600); //设置缓存数据,3600秒后过期
-cache("name"); //获取缓存数据
-cache("name", null); //删除缓存数据
-
-// 明确的方法调用
 cache.set("name", "jack"); // 设置缓存
 cache.set("name", "jack", 3600); // 设置缓存,3600秒过期
 
 cache.get("name"); //获取缓存数据
 cache.delete("name"); //删除缓存数据
 ```
+
+### 创建自定义缓存对象实例
+
+```js
+const myCache = cache.create({ type: "session", prefix: "my_", expire: 10 }); // 创建自己的缓存实例
+
+// 还是相同方式调用方法
+myCache.set("name", "value", 3600);
+```
+
+<a id="options"></a>
+
+## 选项
+
+| 参数          | 类型       | 默认值           | 描述                                   |
+| ------------- | ---------- | ---------------- | -------------------------------------- |
+| `type`        | `string`   | `"local"`        | 缓存类型，可选 `local` 或 `session`    |
+| `expire`      | `number`   | `0`              | 缓存有效期，单位为秒。`0` 表示永久缓存 |
+| `prefix`      | `string`   | `""`             | 缓存键前缀                             |
+| `serialize`   | `function` | `JSON.stringify` | 缓存数据序列化方法                     |
+| `deserialize` | `function` | `JSON.parse`     | 缓存数据反序列化方法                   |
 
 ## API
 
@@ -57,7 +80,7 @@ cache.set("name", $value);
 cache.set("name", $value, 3600);
 ```
 
-如果设置成功返回true，否则返回false。
+如果设置成功返回`true` ，否则返回`false`。
 
 ### 缓存自增
 
@@ -154,7 +177,7 @@ cache.clear();
 cache.remember("start_time", Date.now());
 ```
 
-如果start_time缓存数据不存在，则会设置缓存数据为当前时间。
+如果 start_time 缓存数据不存在，则会设置缓存数据为当前时间。
 第二个参数可以使用闭包方法获取缓存数据。
 
 ```js
@@ -173,7 +196,7 @@ remember方法的第三个参数可以设置缓存的有效期。
 cache.tag('tag')->set('name1','value1');
 cache.tag('tag')->set('name2','value2');
 
-// 清除tag标签的缓存数据
+// 清除 tag 标签的缓存数据
 cache.tag('tag')->clear();
 ```
 
@@ -217,35 +240,35 @@ const localStorage = cache.handler();
 localStorage.getItem("bgcolor");
 ```
 
-### 助手函数
+### 函数式调用
 
-可以直接当作函数来使用
+picocache 支持将缓存实例直接作为函数调用，提供更简洁的缓存操作方式。
 
 ```js
-// 设置缓存数据
-cache("name", $value, 3600);
-// 获取缓存数据
-console.log(cache("name"));
-// 删除缓存数据
-cache("name", null);
-// 返回缓存对象实例
-const store = cache();
+import cache from "picocache";
+
+cache("name", "jack"); // 设置缓存
+cache("name", "jack", 3600); // 设置缓存数据,3600秒后过期
+cache("name"); // 获取缓存数据
+cache("name", null); // 删除缓存数据
+
+const cache = cache(); // 获取当前缓存实例
 ```
 
 ### 切换缓存类型
 
-没有指定缓存类型的话，默认是`LocalStorage`，可以动态切换
+没有指定缓存类型的话，默认是[选项](#options) `type` 的默认值，可以动态切换
 
 ```js
-// 使用LocalStorage缓存
+// 使用 localStorage 缓存
 cache.set('name','value',3600);
 cache.get('name');
 
-// 使用SessionStorage缓存
+// 使用 sessionStorage 缓存
 cache.store('sesson')->set('name','value',3600);
 cache.store('sesson')->get('name');
 
-// 切换到LocalStorage缓存
+// 切换到localStorage 缓存
 cache.store('local')->set('name','value',3600);
 cache.store('local')->get('name');
 ```
@@ -253,25 +276,6 @@ cache.store('local')->get('name');
 如果要返回当前缓存类型对象的句柄，可以使用
 
 ```js
-// 获取SessionStorage原始对象
+// 获取 sessionStorage 原始对象
 const sessionStorage = cache.store('session')->handler();
 ```
-
-### 自定义缓存配置
-
-```js
-const myCache = cache.create({ type: "session", prefix: "my_", expire: 10 }); //创建自己的缓存实例
-
-// 还是相同方式调用方法
-myCache.set("name", "value", 3600);
-```
-
-## 选项
-
-| 参数          | 类型       | 默认值           | 描述                                   |
-| ------------- | ---------- | ---------------- | -------------------------------------- |
-| `type`        | `string`   | `"local"`        | 缓存类型，可选 `local` 或 `session`    |
-| `expire`      | `number`   | `0`              | 缓存有效期，单位为秒。`0` 表示永久缓存 |
-| `prefix`      | `string`   | `""`             | 缓存键前缀                             |
-| `serialize`   | `function` | `JSON.stringify` | 缓存数据序列化方法                     |
-| `deserialize` | `function` | `JSON.parse`     | 缓存数据反序列化方法                   |

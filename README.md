@@ -9,7 +9,7 @@
 [![Changelog](https://img.shields.io/badge/changelog-%F0%9F%93%9D-blue)](https://github.com/ColorlabHQ/picocache/blob/main/CHANGELOG.md)
 ---
 
-一个轻量、易用的浏览器端缓存库，基于 `localStorage` 和 `sessionStorage`，提供统一、简洁的缓存 API。
+简化浏览器存储 API，让 localStorage 和 sessionStorage 使用更加便捷。
 
 ## 特性
 

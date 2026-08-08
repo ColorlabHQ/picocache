@@ -5,7 +5,9 @@
   "categories": {
     "correctness": "error"
   },
-  "rules": {},
+  "rules": {
+    "unicorn/no-empty-file": "off"
+  },
   "env": {
     "builtin": true
   }

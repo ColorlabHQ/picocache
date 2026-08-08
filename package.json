@@ -1,35 +1,21 @@
 {
-  "name": "dataset-config",
+  "name": "picocache",
   "version": "0.0.0",
-  "description": "Parse HTML data attributes into a structured object with automatic type conversion.",
+  "description": "A lightweight browser cache library based on localStorage and sessionStorage.",
   "keywords": [
-    "HTML element",
-    "attribute-parser",
-    "camelcase",
-    "data attribute",
-    "data attributes",
-    "data attrs",
-    "data-conversion",
-    "data-extraction",
-    "data-parser",
-    "data-to-object",
-    "data-utils",
-    "dataset",
-    "deep-object",
-    "dom-data",
-    "exclude-keys",
-    "html-data",
-    "prefix-filter",
-    "type-parsing"
+    "localStorage",
+    "sessionStorage",
+    "storage",
+    "store"
   ],
   "bugs": {
-    "url": "https://github.com/ColorlabHQ/dataset-config/issues"
+    "url": "https://github.com/ColorlabHQ/picocache/issues"
   },
   "license": "MIT",
   "author": "ajiho",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ColorlabHQ/dataset-config.git"
+    "url": "https://github.com/ColorlabHQ/picocache.git"
   },
   "funding": "https://www.lujiahao.com/sponsor",
   "files": [

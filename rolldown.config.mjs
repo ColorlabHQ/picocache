@@ -14,9 +14,9 @@ export default defineConfig({
       format: "es",
     },
     {
-      file: `dist/dataset-config.${isProd ? "min." : ""}js`,
+      file: `dist/picocache.${isProd ? "min." : ""}js`,
       format: "iife",
-      name: "datasetConfig",
+      name: "picocache",
       minify: isProd,
     },
   ],

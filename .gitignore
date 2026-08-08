@@ -1,0 +1,5 @@
+dist
+node_modules
+
+# 覆盖率
+coverage

@@ -9,7 +9,7 @@
 [![Changelog](https://img.shields.io/badge/changelog-%F0%9F%93%9D-blue)](https://github.com/ColorlabHQ/picocache/blob/main/CHANGELOG.md)
 ---
 
-一个轻量、易用的浏览器端缓存库，基于 `localStorage` 和 `sessionStorage`，提供统一、简洁的缓存 API。设计灵感来源于 PHP 框架 [ThinkPHP](https://github.com/top-think/framework) 的[缓存组件](https://doc.thinkphp.cn/v8_0/caches.html)，采用熟悉的缓存操作方式，让前端开发也能享受类似服务端缓存的开发体验。
+一个轻量、易用的浏览器端缓存库，基于 `localStorage` 和 `sessionStorage`，提供统一、简洁的缓存 API。
 
 ## 特性
 
@@ -252,7 +252,7 @@ cache("name", "jack", 3600); // 设置缓存数据,3600秒后过期
 cache("name"); // 获取缓存数据
 cache("name", null); // 删除缓存数据
 
-const cache = cache(); // 获取当前缓存实例
+const instance = cache(); // 获取当前缓存实例
 ```
 
 ### 切换缓存类型
@@ -279,3 +279,7 @@ cache.store('local')->get('name');
 // 获取 sessionStorage 原始对象
 const sessionStorage = cache.store('session')->handler();
 ```
+
+## 🙏 鸣谢
+
+该代码库的 API 设计灵感来源于 PHP 框架 [ThinkPHP](https://github.com/top-think/framework) 的[缓存组件](https://doc.thinkphp.cn/v8_0/caches.html)。

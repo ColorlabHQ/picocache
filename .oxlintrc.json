@@ -6,7 +6,8 @@
     "correctness": "error"
   },
   "rules": {
-    "unicorn/no-empty-file": "off"
+    "unicorn/no-empty-file": "off",
+    "no-unused-vars": ["error", { "caughtErrorsIgnorePattern": "^_" }]
   },
   "env": {
     "builtin": true

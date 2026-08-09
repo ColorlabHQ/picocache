@@ -1,3 +1,5 @@
 allowBuilds:
   esbuild: false
   simple-git-hooks: false
+
+nodeOptions: "${NODE_OPTIONS:- } --localstorage-file=.vitest-storage"

@@ -1,10 +1,11 @@
 import { defineConfig } from "rolldown";
-import copyFiles from "./rolldown-plugin-copy-files.mjs";
+import { copyFiles } from "rolldown-plugin-copy-files";
 
 const isProd = process.env.NODE_ENV === "production";
 
 export default defineConfig({
   input: "src/index.js",
+  platform: "browser",
   transform: {
     target: "es2022",
   },
@@ -24,8 +25,9 @@ export default defineConfig({
     copyFiles({
       targets: [
         {
-          src: "src/**/*.d.ts",
+          src: "src/*.d.ts",
           dest: "dist",
+          options: { up: 1 },
         },
       ],
     }),

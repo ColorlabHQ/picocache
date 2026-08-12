@@ -104,8 +104,6 @@ class Cache {
   }
 
   clear() {
-    console.log("我确实被执行了");
-
     this.#cache.clear();
     return true;
   }

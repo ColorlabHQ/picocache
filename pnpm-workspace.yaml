@@ -1,5 +1,5 @@
 allowBuilds:
   esbuild: false
   simple-git-hooks: false
-
-nodeOptions: "${NODE_OPTIONS:- } --localstorage-file=.vitest-storage"
+minimumReleaseAgeExclude:
+  - rolldown-plugin-copy-files@0.2.0

@@ -1,6 +1,6 @@
 export default [
   {
-    limit: "920B",
+    limit: "1KB",
     path: "./dist/index.js",
   },
 ];

@@ -4,5 +4,4 @@ node_modules
 # 覆盖率
 coverage
 
-# Vitest localStorage database files
-.vitest-storage*
+

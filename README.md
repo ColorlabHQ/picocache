@@ -9,14 +9,16 @@
 [![Changelog](https://img.shields.io/badge/changelog-%F0%9F%93%9D-blue)](https://github.com/ColorlabHQ/picocache/blob/main/CHANGELOG.md)
 ---
 
+简体中文 | [English](./README.en.md)
+
 简化浏览器存储 API，让 localStorage 和 sessionStorage 使用更加便捷。
 
 ## 特性
 
-- 🚀 零依赖
-- 📦 极小体积（minified + brotli ≤ 0.6KB）
+- 🚀 轻量、零依赖
+- 📦 极小体积（minified + brotli ≤ 1KB）
 - ✨ 简洁统一的缓存 API
-- 💾 支持 localStorage / sessionStorage 多种存储驱动
+- 💾 支持 localStorage / sessionStorage
 - ⏱️ 支持 TTL 缓存过期管理
 - 🏷️ 支持缓存标签，实现缓存分组与批量清理
 - 🧩 支持创建多个独立缓存实例
@@ -47,11 +49,20 @@ cache.set("name", "jack", 3600); // 设置缓存,3600秒过期
 
 cache.get("name"); //获取缓存数据
 cache.delete("name"); //删除缓存数据
+
+cache("name", "jack"); // 设置缓存
+cache("name", "jack", 3600); // 设置缓存数据,3600秒后过期
+cache("name"); // 获取缓存数据
+cache("name", null); // 删除缓存数据
+
+const instance = cache(); // 获取当前缓存实例
 ```
 
 ### 创建自定义缓存对象实例
 
 ```js
+import cache from "picocache";
+
 const myCache = cache.create({ type: "session", prefix: "my_", expire: 10 }); // 创建自己的缓存实例
 
 // 还是相同方式调用方法
@@ -240,21 +251,6 @@ const localStorage = cache.handler();
 localStorage.getItem("bgcolor");
 ```
 
-### 函数式调用
-
-picocache 支持将缓存实例直接作为函数调用，提供更简洁的缓存操作方式。
-
-```js
-import cache from "picocache";
-
-cache("name", "jack"); // 设置缓存
-cache("name", "jack", 3600); // 设置缓存数据,3600秒后过期
-cache("name"); // 获取缓存数据
-cache("name", null); // 删除缓存数据
-
-const instance = cache(); // 获取当前缓存实例
-```
-
 ### 切换缓存类型
 
 没有指定缓存类型的话，默认是[选项](#options) `type` 的默认值，可以动态切换
@@ -273,13 +269,12 @@ cache.store('local')->set('name','value',3600);
 cache.store('local')->get('name');
 ```
 
-如果要返回当前缓存类型对象的句柄，可以使用
+如果需要访问底层存储对象，可以使用：
 
 ```js
-// 获取 sessionStorage 原始对象
 const sessionStorage = cache.store('session')->handler();
 ```
 
-## 🙏 鸣谢
+## 鸣谢
 
 该代码库的 API 设计灵感来源于 PHP 框架 [ThinkPHP](https://github.com/top-think/framework) 的[缓存组件](https://doc.thinkphp.cn/v8_0/caches.html)。

@@ -1,18 +1,14 @@
-import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import { describe, expect, it, beforeEach, vi, afterEach } from "vitest";
 import cache from "../src/index.js";
 
-describe("cachedd", () => {
-  let originalSetItem;
-
+describe("picocache", () => {
   beforeEach(() => {
-    cache.clear(); // 每个测试前清空缓存
-    vi.useFakeTimers(); // 使用假的计时器
-    originalSetItem = Storage.prototype.setItem;
+    cache.clear();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    Storage.prototype.setItem = originalSetItem;
-    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it("设置缓存", () => {
@@ -38,16 +34,16 @@ describe("cachedd", () => {
     expect(cache.get("name")).toBe(null);
   });
 
-  // it("触发 setItem 抛出异常并覆盖 catch", () => {
-  //   // 模拟 setItem 抛出异常
-  //   vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-  //     throw new Error("模拟 setItem 失败");
-  //   });
+  it("触发 setItem 抛出异常并覆盖 catch", () => {
+    // 模拟 setItem 抛出异常
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("模拟 setItem 失败");
+    });
 
-  //   const result = cache.set("testKey", "testValue");
+    const result = cache.set("testKey", "testValue");
 
-  //   expect(result).toBe(false);
-  // });
+    expect(result).toBe(false);
+  });
 
   it("缓存自增", () => {
     cache.set("count", 1);

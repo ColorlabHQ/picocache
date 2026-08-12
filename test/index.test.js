@@ -3,7 +3,6 @@ import cache from "../src/index.js";
 
 describe("picocache", () => {
   beforeEach(() => {
-    cache.clear();
     vi.useFakeTimers();
   });
 
@@ -11,27 +10,33 @@ describe("picocache", () => {
     vi.useRealTimers();
   });
 
-  it("设置缓存", () => {
+  it("set: 设置缓存", () => {
     cache.set("name", "jack");
     expect(cache.get("name")).toBe("jack");
   });
 
-  it("缓存结构被破坏时不应该报错", () => {
-    localStorage.setItem("foo", "test");
-
-    expect(() => {
-      cache.get("foo");
-    }).not.throw();
-  });
-
-  it("设置缓存-支持过期时间", () => {
+  it("set: 第三个参数支持过期时间", () => {
     cache.set("name", "jack", 1);
     expect(cache.get("name")).toBe("jack");
 
     // 前进 1001 毫秒，模拟过期
     vi.advanceTimersByTime(1001);
-    // 再次读取，应返回 null（已过期并删除）
+    // 再次读取，应返回 null 且 key 被删除
     expect(cache.get("name")).toBe(null);
+    expect(cache.has("name")).toBe(false);
+  });
+
+  it("get: 缓存结构被破坏时不应该报错", () => {
+    cache.set("foo", "test");
+    expect(cache.get("foo")).toBe("test");
+
+    // 此时原数据被破坏
+    localStorage.setItem("foo", "bar");
+
+    // 不应该抛出异常
+    expect(() => {
+      cache.get("foo");
+    }).not.throw();
   });
 
   it("触发 setItem 抛出异常并覆盖 catch", () => {
@@ -47,16 +52,25 @@ describe("picocache", () => {
 
   it("缓存自增", () => {
     cache.set("count", 1);
-    expect(cache.inc("count")).toBe(2);
+    cache.inc("count"); // 步进值 1
+    expect(cache.get("count")).toBe(2);
 
-    //应该抛出非数字类型的错误
+    cache.inc("count", 5);
+    expect(cache.get("count")).toBe(7);
+  });
+
+  it("缓存自增-非数字抛出异常", () => {
     cache.set("count", "hello");
     expect(() => cache.inc("count")).toThrowError("Unsupported operand types: String + int");
   });
 
   it("缓存自减", () => {
-    cache.set("count", 4);
-    expect(cache.dec("count", 3)).toBe(1);
+    cache.set("count", 10);
+    cache.dec("count");
+    expect(cache.get("count")).toBe(9);
+
+    cache.dec("count", 3);
+    expect(cache.get("count")).toBe(6);
   });
 
   it("缓存获取支持默认值", () => {
@@ -121,6 +135,7 @@ describe("picocache", () => {
   it("不存在则写入缓存数据后返回", () => {
     const time = Date.now();
     const val = cache.remember("time", time);
+
     expect(val).toBe(time);
     expect(cache.get("time")).toBe(time);
 

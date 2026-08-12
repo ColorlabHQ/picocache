@@ -2,7 +2,7 @@ import Cache from "./Cache.js";
 
 const instance = new Cache();
 
-function cache2(...args) {
+function cache(...args) {
   if (args.length === 0) {
     return instance;
   }
@@ -20,8 +20,8 @@ function cache2(...args) {
 
 for (const key of Object.getOwnPropertyNames(Cache.prototype)) {
   if (key !== "constructor") {
-    cache2[key] = instance[key].bind(instance);
+    cache[key] = instance[key].bind(instance);
   }
 }
 
-export default cache2;
+export default cache;

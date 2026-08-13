@@ -1,5 +1,9 @@
 import TagSet from "./TagSet.js";
 
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+const STORAGE_TYPES = ["local", "session"];
+
 /**
  * 默认缓存配置
  */
@@ -36,12 +40,16 @@ const Default = {
   /**
    * 序列化
    */
-  serialize: JSON.stringify,
+  serialize(value) {
+    return encoder.encode(JSON.stringify(value)).toBase64();
+  },
 
   /**
    * 反序列化
    */
-  deserialize: JSON.parse,
+  deserialize(value) {
+    return JSON.parse(decoder.decode(Uint8Array.fromBase64(value)));
+  },
 };
 
 class Cache {
@@ -54,6 +62,13 @@ class Cache {
       ...Default,
       ...config,
     };
+
+    if (!STORAGE_TYPES.includes(this.#config.type)) {
+      throw new TypeError(
+        `Unsupported cache storage type "${this.#config.type}". ` +
+          `Expected one of: ${STORAGE_TYPES.join(", ")}`,
+      );
+    }
 
     /**
      * 获取存储驱动
@@ -204,7 +219,13 @@ class Cache {
       throw new Error(`Unsupported operand types: ${getType(value)} + int`);
     }
 
-    return this.set(key, value + step);
+    const result = value + step;
+
+    if (!this.set(key, result)) {
+      throw new Error("Failed to save incremented cache value");
+    }
+
+    return result;
   }
 
   /**
@@ -265,7 +286,6 @@ class Cache {
   store(type) {
     return new Cache({
       ...this.#config,
-
       type,
     });
   }

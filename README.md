@@ -15,12 +15,13 @@
 
 ## 特性
 
-- 🚀 轻量、零依赖
-- 🚀 大量测试
+- 🪶 轻量、零依赖
+- 🧪 大量测试
 - 📦 极小体积（minified + brotli ≤ 1KB）
-- ✨ 简洁统一的缓存 API
-- ✨ 支持自定义缓存前缀
-- ✨ 自定义序列化和反序列化方法
+- 🧰 简洁统一的缓存 API
+- 🔑 支持自定义缓存前缀
+- 🔒 默认使用 Base64 编码存储，避免缓存数据直接以明文形式存在
+- 🔄 支持自定义序列化和反序列化方法
 - ⏱️ 支持 TTL 缓存过期管理
 - 🏷️ 支持缓存标签，实现缓存分组与批量清理
 - 🧩 支持创建多个独立缓存实例
@@ -75,13 +76,13 @@ myCache.set("name", "value", 3600);
 
 ## 选项
 
-| 参数          | 类型       | 默认值           | 描述                                   |
-| ------------- | ---------- | ---------------- | -------------------------------------- |
-| `type`        | `string`   | `"local"`        | 缓存类型，可选 `local` 或 `session`    |
-| `expire`      | `number`   | `0`              | 缓存有效期，单位为秒。`0` 表示永久缓存 |
-| `prefix`      | `string`   | `""`             | 缓存键前缀                             |
-| `serialize`   | `function` | `JSON.stringify` | 缓存数据序列化方法                     |
-| `deserialize` | `function` | `JSON.parse`     | 缓存数据反序列化方法                   |
+| 参数          | 类型       | 默认值    | 描述                                   |
+| ------------- | ---------- | --------- | -------------------------------------- |
+| `type`        | `string`   | `"local"` | 缓存类型，可选 `local` 或 `session`    |
+| `expire`      | `number`   | `0`       | 缓存有效期，单位为秒。`0` 表示永久缓存 |
+| `prefix`      | `string`   | `""`      | 缓存键前缀                             |
+| `serialize`   | `function` | -         | 缓存数据序列化方法                     |
+| `deserialize` | `function` | -         | 缓存数据反序列化方法                   |
 
 ## API
 
@@ -275,6 +276,33 @@ cache.store('local')->get('name');
 
 ```js
 const sessionStorage = cache.store('session')->handler();
+```
+
+### 自定义序列化和反序列化方法
+
+`picocache` 默认使用 Base64 对缓存数据进行编码和解码。你可以通过 `serialize` 和 `deserialize` 覆盖默认行为。
+
+例如，直接使用 JSON：
+
+```js
+const cache = createCache({
+  serialize: JSON.stringify,
+  deserialize: JSON.parse,
+});
+```
+
+也可以使用自定义的编码、压缩或加密方法：
+
+```js
+const cache = createCache({
+  serialize(value) {
+    return myEncrypt(JSON.stringify(value));
+  },
+
+  deserialize(value) {
+    return JSON.parse(myDecrypt(value));
+  },
+});
 ```
 
 ## 鸣谢

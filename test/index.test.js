@@ -1,8 +1,11 @@
 import { describe, expect, it, beforeEach, vi, afterEach } from "vitest";
+import Cache from "../src/Cache.js";
 import cache from "../src/index.js";
 
 describe("picocache", () => {
   beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
     vi.useFakeTimers();
   });
 
@@ -10,12 +13,32 @@ describe("picocache", () => {
     vi.useRealTimers();
   });
 
-  it("set: 设置缓存", () => {
+  it("type 无效时抛出异常", () => {
+    expect(() => {
+      cache.create({
+        type: "foo",
+      });
+    }).toThrow(
+      new TypeError('Unsupported cache storage type "foo". Expected one of: local, session'),
+    );
+  });
+
+  it("应支持本地存储和会话存储类型", () => {
+    expect(() => {
+      cache.create({ type: "local" });
+    }).not.toThrow();
+
+    expect(() => {
+      cache.create({ type: "session" });
+    }).not.toThrow();
+  });
+
+  it("设置缓存", () => {
     cache.set("name", "jack");
     expect(cache.get("name")).toBe("jack");
   });
 
-  it("set: 第三个参数支持过期时间", () => {
+  it("设置缓存支持过期时间", () => {
     cache.set("name", "jack", 1);
     expect(cache.get("name")).toBe("jack");
 
@@ -26,11 +49,11 @@ describe("picocache", () => {
     expect(cache.has("name")).toBe(false);
   });
 
-  it("get: 缓存结构被破坏时不应该报错", () => {
+  it("获取缓存时,数据结构被破坏时不应该报错", () => {
     cache.set("foo", "test");
     expect(cache.get("foo")).toBe("test");
 
-    // 此时原数据被破坏
+    // 破坏原本的数据结构
     localStorage.setItem("foo", "bar");
 
     // 不应该抛出异常
@@ -39,7 +62,7 @@ describe("picocache", () => {
     }).not.throw();
   });
 
-  it("触发 setItem 抛出异常并覆盖 catch", () => {
+  it("setItem 方法异常时设置缓存返回 false", () => {
     // 模拟 setItem 抛出异常
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("模拟 setItem 失败");
@@ -50,36 +73,58 @@ describe("picocache", () => {
     expect(result).toBe(false);
   });
 
-  it("缓存自增", () => {
+  it("缓存自增、自减", () => {
     cache.set("count", 1);
-    cache.inc("count"); // 步进值 1
-    expect(cache.get("count")).toBe(2);
 
-    cache.inc("count", 5);
+    expect(cache.inc("count")).toBe(2); // 默认步长为1
+    expect(cache.inc("count", 5)).toBe(7); // 指定步长
+
+    cache.set("count", 10);
+    expect(cache.dec("count")).toBe(9);
+    expect(cache.dec("count", 3)).toBe(6);
+  });
+
+  it("支持负数步长", () => {
+    const cache = new Cache();
+
+    cache.set("count", 10);
+
+    expect(cache.inc("count", -3)).toBe(7);
     expect(cache.get("count")).toBe(7);
   });
 
-  it("缓存自增-非数字抛出异常", () => {
+  it("支持小数", () => {
+    cache.set("count", 1.5);
+
+    expect(cache.inc("count", 0.5)).toBe(2);
+    expect(cache.get("count")).toBe(2);
+  });
+
+  it("缓存自增、减时缓存不存在时应该抛出异常", () => {
+    expect(() => cache.inc("count")).toThrow("Unsupported operand types: Null + int");
+  });
+
+  it("缓存自增、减时非数字抛出异常", () => {
     cache.set("count", "hello");
     expect(() => cache.inc("count")).toThrowError("Unsupported operand types: String + int");
   });
 
-  it("缓存自减", () => {
+  it("缓存自增、减保存结果失败时应该抛出异常", () => {
+    const cache = new Cache();
     cache.set("count", 10);
-    cache.dec("count");
-    expect(cache.get("count")).toBe(9);
 
-    cache.dec("count", 3);
-    expect(cache.get("count")).toBe(6);
+    vi.spyOn(cache, "set").mockReturnValue(false);
+
+    expect(() => cache.inc("count")).toThrow("Failed to save incremented cache value");
   });
 
-  it("缓存获取支持默认值", () => {
+  it("获取缓存不存在值时支持默认值", () => {
     expect(cache.get("name")).toBe(null);
     expect(cache.get("name", "default")).toBe("default");
-    expect(typeof cache.get("name", () => "fn")).toBe("string");
+    expect(cache.get("name", () => "fn")).toBe("fn");
   });
 
-  it("push:针对数组的情况追加数据", () => {
+  it("针对数组的情况追加数据", () => {
     cache.set("arr", [1, 2]);
     cache.push("arr", 3);
     cache.push("arr", 3);
@@ -110,7 +155,7 @@ describe("picocache", () => {
     expect(result.includes(1000)).toBe(true); // 新添加的在里面
   });
 
-  it("删除数据", () => {
+  it("删除缓存", () => {
     cache.set("name", "hello");
     cache.delete("name");
     expect(cache.get("name")).toBe(null);
@@ -173,6 +218,13 @@ describe("picocache", () => {
     expect(cache.get("k2")).toBe(null);
   });
 
+  it("tag append 不应该重复添加相同的 key", () => {
+    cache.tag("group1").append("a");
+    cache.tag("group1").append("a");
+
+    expect(cache.getTagItems("group1")).toEqual(["a"]);
+  });
+
   it("切换缓存类型", () => {
     const local = cache.store("local");
     const session = cache.store("session");
@@ -185,9 +237,33 @@ describe("picocache", () => {
   });
 
   it("create 创建自定义实例", () => {
-    const newStore = cache.create({ prefix: "my_", expire: 2 });
+    const newStore = cache.create({
+      prefix: "my_",
+    });
+
     newStore.set("key", "val");
-    expect(localStorage.getItem("my_key")).toContain("val");
+
+    expect(newStore.get("key")).toBe("val");
+  });
+
+  it("create 应用自定义 prefix", () => {
+    const newStore = cache.create({
+      prefix: "my_",
+    });
+
+    newStore.set("key", "val");
+
+    expect(localStorage.getItem("my_key")).not.toBeNull();
+    expect(localStorage.getItem("key")).toBeNull();
+  });
+
+  it("默认使用 Base64 编码序列化缓存数据", () => {
+    cache.set("key", "val");
+
+    const raw = localStorage.getItem("key");
+
+    expect(raw).not.toContain("val");
+    expect(cache.get("key")).toBe("val");
   });
 
   it("助手函数调用方式", () => {
@@ -197,11 +273,46 @@ describe("picocache", () => {
     cache("x", null);
     expect(cache("x")).toBe(null);
 
-    expect(cache()).toBeInstanceOf(Object);
+    expect(cache()).toBeInstanceOf(Cache);
   });
 
   it("获取缓存对象实例", () => {
-    const storage = cache.handler();
-    expect(storage).toBeInstanceOf(Object);
+    expect(cache.handler()).toBe(localStorage);
+
+    // 支持切换时获取对应的缓存对象实例
+    expect(cache.store("local").handler()).toBe(localStorage);
+    expect(cache.store("session").handler()).toBe(sessionStorage);
+  });
+
+  it("prefix 为空时应该清理所有缓存", () => {
+    const picocache = cache.create();
+
+    picocache.set("user", "Tom");
+
+    localStorage.setItem("other:user", "other");
+
+    picocache.clear();
+
+    expect(localStorage.length).toBe(0);
+  });
+
+  it("应该只清理当前 namespace 的缓存", () => {
+    const picocache = cache.create({
+      prefix: "app_",
+    });
+
+    picocache.set("user", { name: "Tom" });
+    picocache.set("token", "123");
+
+    localStorage.setItem("other_user", "other");
+    localStorage.setItem("other_token", "456");
+
+    picocache.clear();
+
+    expect(localStorage.getItem("app_user")).toBeNull();
+    expect(localStorage.getItem("app_token")).toBeNull();
+
+    expect(localStorage.getItem("other_user")).toBe("other");
+    expect(localStorage.getItem("other_token")).toBe("456");
   });
 });

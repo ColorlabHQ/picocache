@@ -194,6 +194,35 @@ describe("picocache", () => {
     expect(cache.get("fn")).toBe("fn");
   });
 
+  it("rememberForever:缓存不存在时应该计算并永久保存", () => {
+    const factory = vi.fn(() => ({ name: "test" }));
+
+    const result = cache.rememberForever("user", factory);
+
+    expect(result).toEqual({ name: "test" });
+    expect(factory).toHaveBeenCalledTimes(1);
+
+    expect(cache.get("user")).toEqual({ name: "test" });
+
+    const raw = cache.handler().getItem("user");
+    const cacheValue = cache.deserialize
+      ? cache.deserialize(raw)
+      : JSON.parse(new TextDecoder().decode(Uint8Array.fromBase64(raw)));
+
+    expect(cacheValue.expire).toBe(0);
+  });
+
+  it("rememberForever:缓存存在时应该直接返回缓存值，不执行计算", () => {
+    cache.set("user", { name: "cached" });
+
+    const factory = vi.fn(() => ({ name: "new" }));
+
+    const result = cache.rememberForever("user", factory);
+
+    expect(result).toEqual({ name: "cached" });
+    expect(factory).not.toHaveBeenCalled();
+  });
+
   it("tag 操作:set + clear + getTagItems", () => {
     cache.tag("group1").set("a", 1);
     cache.tag("group1").set("b", 2);

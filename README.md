@@ -187,20 +187,31 @@ cache.clear();
 
 ### 不存在则写入缓存数据后返回
 
+`remember` 会先从缓存中获取数据。如果缓存不存在，则计算并保存数据后返回。
+
 ```js
 cache.remember("start_time", Date.now());
 ```
 
-如果 start_time 缓存数据不存在，则会设置缓存数据为当前时间。
-第二个参数可以使用闭包方法获取缓存数据。
+第二个参数也可以传入函数，仅在缓存不存在时执行：
 
 ```js
-cache.remember("start_time", function () {
-  return Date.now();
-});
+cache.remember("start_time", () => Date.now());
 ```
 
-remember方法的第三个参数可以设置缓存的有效期。
+第三个参数可以设置缓存有效期，单位为秒：
+
+```js
+cache.remember("token", getToken, 3600);
+```
+
+如果希望缓存永久有效，可以使用 `rememberForever`：
+
+```js
+cache.rememberForever("config", () => loadConfig());
+```
+
+缓存存在时直接返回缓存数据，不会再次执行回调；缓存不存在时执行回调并永久保存结果。
 
 ### 缓存标签
 

@@ -114,6 +114,11 @@ export interface Cache {
   remember<T>(key: string, value: T | (() => T), expire?: number | null): T;
 
   /**
+   * 缓存不存在时计算并永久保存。
+   */
+  rememberForever<T>(key: string, value: T | (() => T)): T;
+
+  /**
    * 自增。
    */
   inc(key: string, step?: number): number;

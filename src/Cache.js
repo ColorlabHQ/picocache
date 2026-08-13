@@ -210,6 +210,13 @@ class Cache {
   }
 
   /**
+   * 缓存不存在时计算并永久保存
+   */
+  rememberForever(key, value) {
+    return this.remember(key, value, 0);
+  }
+
+  /**
    * 自增
    */
   inc(key, step = 1) {

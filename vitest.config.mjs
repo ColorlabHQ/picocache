@@ -2,6 +2,8 @@ import { configDefaults, defineConfig } from "vitest/config";
 
 const nodeMajor = +process.versions.node.split(".")[0];
 
+console.log(nodeMajor);
+
 export default defineConfig({
   test: {
     clearMocks: true,

@@ -1,13 +1,10 @@
 import { configDefaults, defineConfig } from "vitest/config";
 
-const nodeMajor = +process.versions.node.split(".")[0];
-
-console.log(nodeMajor);
-
 export default defineConfig({
   test: {
     clearMocks: true,
     restoreMocks: true,
+    unstubGlobals: true,
     environment: "jsdom",
     execArgv: ["--no-experimental-webstorage"],
     include: ["test/**/*.test.js"],

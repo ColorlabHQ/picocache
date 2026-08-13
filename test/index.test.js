@@ -62,15 +62,15 @@ describe("picocache", () => {
     }).not.throw();
   });
 
-  it("setItem 方法异常时设置缓存返回 false", () => {
-    // 模拟 setItem 抛出异常
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new Error("模拟 setItem 失败");
+  it("setItem 方法异常时设置缓存返回 false", async () => {
+    vi.stubGlobal("localStorage", {
+      setItem: vi.fn(() => {
+        throw new Error("模拟 setItem 失败");
+      }),
     });
-
-    const result = cache.set("testKey", "testValue");
-
-    expect(result).toBe(false);
+    vi.resetModules();
+    const { default: cache } = await import("../src/index.js");
+    expect(cache.set("testKey", "testValue")).toBe(false);
   });
 
   it("缓存自增、自减", () => {

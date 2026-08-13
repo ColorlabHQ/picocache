@@ -16,9 +16,11 @@
 ## 特性
 
 - 🚀 轻量、零依赖
+- 🚀 大量测试
 - 📦 极小体积（minified + brotli ≤ 1KB）
 - ✨ 简洁统一的缓存 API
-- 💾 支持 localStorage / sessionStorage
+- ✨ 支持自定义缓存前缀
+- ✨ 自定义序列化和反序列化方法
 - ⏱️ 支持 TTL 缓存过期管理
 - 🏷️ 支持缓存标签，实现缓存分组与批量清理
 - 🧩 支持创建多个独立缓存实例
@@ -86,9 +88,9 @@ myCache.set("name", "value", 3600);
 ### 设置缓存
 
 ```js
-cache.set("name", $value);
+cache.set("name", value);
 // 缓存在3600秒之后过期
-cache.set("name", $value, 3600);
+cache.set("name", value, 3600);
 ```
 
 如果设置成功返回`true` ，否则返回`false`。

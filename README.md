@@ -101,9 +101,9 @@ cache.set("name", value, 3600);
 
 如果设置成功返回`true` ，否则返回`false`。
 
-### 缓存数值增减
+### 计数器增减操作
 
-针对计数类型的缓存数据，可以使用 `inc` 和 `dec` 方法进行增减操作。
+对于计数器类型的缓存数据，可以使用 `inc` 和 `dec` 方法执行自增和自减操作。
 
 ```js
 cache.set("views", 100);
@@ -297,7 +297,7 @@ cache.store('local')->get('name');
 例如，直接使用 JSON：
 
 ```js
-const cache = createCache({
+const myCache = cache.create({
   serialize: JSON.stringify,
   deserialize: JSON.parse,
 });
@@ -306,7 +306,7 @@ const cache = createCache({
 也可以使用自定义的编码、压缩或加密方法：
 
 ```js
-const cache = createCache({
+const myCache = cache.create({
   serialize(value) {
     return myEncrypt(JSON.stringify(value));
   },
@@ -320,6 +320,6 @@ const cache = createCache({
 ## 鸣谢
 
 - [ThinkPHP](https://doc.thinkphp.cn/v8_0/caches.html)
-- [Lravel](https://www.laravel.wiki/en/cache)
+- [Laravel](https://www.laravel.wiki/en/cache)
 
 该代码库的 API 设计灵感来源于 以上 PHP 框架的缓存组件。

@@ -17,8 +17,9 @@
 
 - 🪶 轻量、零依赖
 - 🧪 大量测试
-- 📦 极小体积（minified + brotli ≤ 2KB）
-- 🧰 简洁统一的缓存 API
+- 📦 极小体积（brotli ≤ 2KB）
+- 🧰 提供语义化、易用的缓存操作 API
+- 💾 保持 JavaScript 数据类型，支持 null、undefined、对象、数组等值的存取
 - 🔑 支持自定义缓存前缀
 - 🔒 默认使用 Base64 编码存储，避免缓存数据直接以明文形式存在
 - 🔄 支持自定义序列化和反序列化方法
@@ -51,7 +52,7 @@ cache.set("name", "jack"); // 设置缓存
 cache.set("name", "jack", 3600); // 设置缓存,3600秒过期
 
 cache.get("name"); //获取缓存数据
-cache.delete("name"); //删除缓存数据
+cache.remove("name"); //删除缓存数据
 
 cache("name", "jack"); // 设置缓存
 cache("name", "jack", 3600); // 设置缓存数据,3600秒后过期
@@ -66,7 +67,7 @@ const instance = cache(); // 获取当前缓存实例
 ```js
 import cache from "picocache";
 
-const myCache = cache.create({ type: "session", prefix: "my_", expire: 10 }); // 创建自己的缓存实例
+const myCache = cache.create({ type: "session", prefix: "my_", ttl: 10 }); // 创建自己的缓存实例
 
 // 还是相同方式调用方法
 myCache.set("name", "value", 3600);
@@ -79,10 +80,11 @@ myCache.set("name", "value", 3600);
 | 参数          | 类型       | 默认值    | 描述                                   |
 | ------------- | ---------- | --------- | -------------------------------------- |
 | `type`        | `string`   | `"local"` | 缓存类型，可选 `local` 或 `session`    |
-| `expire`      | `number`   | `0`       | 缓存有效期，单位为秒。`0` 表示永久缓存 |
+| `ttl`         | `number`   | `0`       | 缓存有效期，单位为秒。`0` 表示永久缓存 |
 | `prefix`      | `string`   | `""`      | 缓存键前缀                             |
 | `serialize`   | `function` | -         | 缓存数据序列化方法                     |
 | `deserialize` | `function` | -         | 缓存数据反序列化方法                   |
+| `fail_delete` | `boolean`  | `true`    | 获取缓存失败后是否强制删除             |
 
 ## API
 
@@ -109,7 +111,7 @@ cache.inc("name", 3);
 ```
 
 > [!WARNING]
-> 只能对数字或者浮点型数据进行自增和自减操作。
+> 只能对数字自增和自减操作。
 
 ### 缓存自减
 
@@ -164,7 +166,7 @@ cache.get("name"); // [1,2,3,4,5]
 ### 删除缓存
 
 ```js
-cache.delete("name");
+cache.remove("name");
 ```
 
 ### 获取并删除缓存
@@ -204,14 +206,6 @@ cache.remember("start_time", () => Date.now());
 ```js
 cache.remember("token", getToken, 3600);
 ```
-
-如果希望缓存永久有效，可以使用 `rememberForever`：
-
-```js
-cache.rememberForever("config", () => loadConfig());
-```
-
-缓存存在时直接返回缓存数据，不会再次执行回调；缓存不存在时执行回调并永久保存结果。
 
 ### 缓存标签
 
@@ -283,12 +277,6 @@ cache.store('local')->set('name','value',3600);
 cache.store('local')->get('name');
 ```
 
-如果需要访问底层存储对象，可以使用：
-
-```js
-const sessionStorage = cache.store('session')->handler();
-```
-
 ### 自定义序列化和反序列化方法
 
 `picocache` 默认使用 Base64 对缓存数据进行编码和解码。你可以通过 `serialize` 和 `deserialize` 覆盖默认行为。
@@ -318,4 +306,7 @@ const cache = createCache({
 
 ## 鸣谢
 
-该代码库的 API 设计灵感来源于 PHP 框架 [ThinkPHP](https://github.com/top-think/framework) 的[缓存组件](https://doc.thinkphp.cn/v8_0/caches.html)。
+- [ThinkPHP](https://doc.thinkphp.cn/v8_0/caches.html)
+- [Lravel](https://www.laravel.wiki/en/cache)
+
+该代码库的 API 设计灵感来源于 以上 PHP 框架的缓存组件。

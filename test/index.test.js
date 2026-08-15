@@ -23,6 +23,76 @@ describe("picocache", () => {
     );
   });
 
+  it("获取当前 namespace 缓存数量", () => {
+    cache.set("a", 1);
+    cache.set("b", 2);
+
+    expect(cache.length).toBe(2);
+
+    cache.remove("a");
+
+    expect(cache.length).toBe(1);
+  });
+
+  it("创建实例时 ttl 配置必须是非负整数", () => {
+    expect(() => {
+      cache.create({
+        ttl: -1,
+      });
+    }).toThrow(new TypeError("ttl must be a non-negative integer"));
+
+    expect(() => {
+      cache.create({
+        ttl: "100",
+      });
+    }).toThrow(new TypeError("ttl must be a non-negative integer"));
+  });
+
+  it("反序列化失败时应该删除损坏缓存", () => {
+    cache.set("foo", "bar");
+
+    localStorage.setItem("foo", "invalid-data");
+
+    expect(cache.get("foo")).toBe(null);
+
+    // failDelete 默认 true
+    expect(localStorage.getItem("foo")).toBeNull();
+  });
+
+  it("设置缓存 ttl 必须是非负整数", () => {
+    expect(() => {
+      cache.set("foo", "bar", -1);
+    }).toThrow(new TypeError("ttl must be a non-negative integer"));
+
+    expect(() => {
+      cache.set("foo", "bar", "1");
+    }).toThrow(new TypeError("ttl must be a non-negative integer"));
+  });
+
+  it("自增步长必须是整数", () => {
+    cache.set("count", 1);
+
+    expect(() => {
+      cache.inc("count", 1.5);
+    }).toThrow(new TypeError("increment step must be an integer"));
+
+    expect(() => {
+      cache.inc("count", "1");
+    }).toThrow(new TypeError("increment step must be an integer"));
+  });
+
+  it("自减步长必须是整数", () => {
+    cache.set("count", 10);
+
+    expect(() => {
+      cache.dec("count", 1.5);
+    }).toThrow(new TypeError("decrement step must be an integer"));
+
+    expect(() => {
+      cache.dec("count", "1");
+    }).toThrow(new TypeError("decrement step must be an integer"));
+  });
+
   it("应支持本地存储和会话存储类型", () => {
     expect(() => {
       cache.create({ type: "local" });
@@ -47,19 +117,6 @@ describe("picocache", () => {
     // 再次读取，应返回 null 且 key 被删除
     expect(cache.get("name")).toBe(null);
     expect(cache.has("name")).toBe(false);
-  });
-
-  it("获取缓存时,数据结构被破坏时不应该报错", () => {
-    cache.set("foo", "test");
-    expect(cache.get("foo")).toBe("test");
-
-    // 破坏原本的数据结构
-    localStorage.setItem("foo", "bar");
-
-    // 不应该抛出异常
-    expect(() => {
-      cache.get("foo");
-    }).not.throw();
   });
 
   it("setItem 方法异常时设置缓存返回 false", async () => {
@@ -91,13 +148,6 @@ describe("picocache", () => {
 
     expect(cache.inc("count", -3)).toBe(7);
     expect(cache.get("count")).toBe(7);
-  });
-
-  it("支持小数", () => {
-    cache.set("count", 1.5);
-
-    expect(cache.inc("count", 0.5)).toBe(2);
-    expect(cache.get("count")).toBe(2);
   });
 
   it("缓存自增、减时缓存不存在时应该抛出异常", () => {
@@ -157,7 +207,7 @@ describe("picocache", () => {
 
   it("删除缓存", () => {
     cache.set("name", "hello");
-    cache.delete("name");
+    cache.remove("name");
     expect(cache.get("name")).toBe(null);
   });
 
@@ -192,35 +242,6 @@ describe("picocache", () => {
       return "fn";
     });
     expect(cache.get("fn")).toBe("fn");
-  });
-
-  it("rememberForever:缓存不存在时应该计算并永久保存", () => {
-    const factory = vi.fn(() => ({ name: "test" }));
-
-    const result = cache.rememberForever("user", factory);
-
-    expect(result).toEqual({ name: "test" });
-    expect(factory).toHaveBeenCalledTimes(1);
-
-    expect(cache.get("user")).toEqual({ name: "test" });
-
-    const raw = cache.handler().getItem("user");
-    const cacheValue = cache.deserialize
-      ? cache.deserialize(raw)
-      : JSON.parse(new TextDecoder().decode(Uint8Array.fromBase64(raw)));
-
-    expect(cacheValue.expire).toBe(0);
-  });
-
-  it("rememberForever:缓存存在时应该直接返回缓存值，不执行计算", () => {
-    cache.set("user", { name: "cached" });
-
-    const factory = vi.fn(() => ({ name: "new" }));
-
-    const result = cache.rememberForever("user", factory);
-
-    expect(result).toEqual({ name: "cached" });
-    expect(factory).not.toHaveBeenCalled();
   });
 
   it("tag 操作:set + clear + getTagItems", () => {
@@ -343,5 +364,103 @@ describe("picocache", () => {
 
     expect(localStorage.getItem("other_user")).toBe("other");
     expect(localStorage.getItem("other_token")).toBe("456");
+  });
+
+  it("supports undefined value", () => {
+    cache.set("foo", undefined);
+
+    expect(cache.has("foo")).toBe(true);
+    expect(cache.get("foo")).toBeUndefined();
+  });
+
+  it("批量获取缓存", () => {
+    cache.set("name", "jack");
+    cache.set("age", 18);
+    cache.set("theme", "dark");
+
+    expect(cache.many(["name", "age", "theme"])).toEqual({
+      name: "jack",
+      age: 18,
+      theme: "dark",
+    });
+  });
+
+  it("批量获取缓存时不存在的 key 返回 null", () => {
+    cache.set("name", "jack");
+
+    expect(cache.many(["name", "age"])).toEqual({
+      name: "jack",
+      age: null,
+    });
+  });
+
+  it("获取缓存剩余 ttl", () => {
+    // 不存在
+    expect(cache.ttl("missing")).toBe(-1);
+
+    // 永不过期
+    cache.set("forever", "value");
+
+    expect(cache.ttl("forever")).toBe(0);
+
+    // 过期时间
+    cache.set("foo", "bar", 10);
+
+    expect(cache.ttl("foo")).toBe(10);
+
+    vi.advanceTimersByTime(3000);
+
+    expect(cache.ttl("foo")).toBe(7);
+  });
+
+  it("批量设置缓存", () => {
+    expect(
+      cache.setMany({
+        name: "jack",
+        age: 18,
+      }),
+    ).toBe(true);
+
+    expect(cache.get("name")).toBe("jack");
+    expect(cache.get("age")).toBe(18);
+  });
+
+  it("length 应该只计算当前 namespace", () => {
+    const appCache = cache.create({
+      prefix: "app_",
+    });
+
+    appCache.set("a", 1);
+
+    localStorage.setItem("other", "value");
+
+    expect(appCache.length).toBe(1);
+  });
+
+  it("反序列化失败且 failDelete=false 时不应该删除缓存", () => {
+    const cache = new Cache({
+      failDelete: false,
+    });
+
+    cache.set("foo", "bar");
+
+    localStorage.setItem("foo", "invalid-data");
+
+    expect(cache.get("foo")).toBe(null);
+
+    expect(localStorage.getItem("foo")).toBe("invalid-data");
+  });
+
+  it("批量设置缓存部分失败时应该返回 false", () => {
+    const cache = new Cache();
+
+    vi.spyOn(cache, "set").mockReturnValueOnce(true).mockReturnValueOnce(false);
+
+    expect(
+      cache.setMany({
+        a: 1,
+        b: 2,
+      }),
+    ).toBe(false);
   });
 });

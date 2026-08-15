@@ -3,6 +3,10 @@ import TagSet from "./TagSet.js";
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const STORAGE_TYPES = ["local", "session"];
+const MESSAGE_TTL_INVALID = "ttl must be a non-negative integer";
+const MISSING = Symbol();
+const TTL_MISSING = -1;
+export const TTL_FOREVER = 0;
 
 /**
  * 默认缓存配置
@@ -28,7 +32,7 @@ const Default = {
    * 0:
    * 永不过期
    */
-  expire: 0,
+  ttl: TTL_FOREVER,
 
   /**
    * key 前缀
@@ -50,12 +54,24 @@ const Default = {
   deserialize(value) {
     return JSON.parse(decoder.decode(Uint8Array.fromBase64(value)));
   },
+
+  /**
+   * 获取缓存失败后是否强制删除
+   */
+  failDelete: true,
 };
 
 class Cache {
   #cache;
 
   #config;
+
+  /**
+   * 当前 namespace 下有效缓存数量
+   */
+  get length() {
+    return this.keys().length;
+  }
 
   constructor(config = {}) {
     this.#config = {
@@ -70,8 +86,12 @@ class Cache {
       );
     }
 
+    if (!isNonNegativeInteger(this.#config.ttl)) {
+      throw new TypeError(MESSAGE_TTL_INVALID);
+    }
+
     /**
-     * 获取存储驱动
+     * 获取 Storage
      */
     this.#cache = window[`${this.#config.type}Storage`];
   }
@@ -97,35 +117,52 @@ class Cache {
     return `${this.#config.prefix}${key}`;
   }
 
+  #getItem(key) {
+    return this.#cache.getItem(this.#getKey(key));
+  }
+
+  #setItem(key, value) {
+    return this.#cache.setItem(this.#getKey(key), this.#config.serialize(value));
+  }
+
+  #removeItem(key) {
+    this.#cache.removeItem(this.#getKey(key));
+  }
+
   /**
-   * 保存缓存
+   * 获取原始缓存值
    */
-  set(key, value, expire = null) {
-    /**
-     * null:
-     * 使用默认过期时间
-     *
-     * 0:
-     * 永不过期
-     */
-    const ttl = expire ?? this.#config.expire;
+  #getCacheValue(key) {
+    const raw = this.#getItem(key);
 
-    const cacheValue = {
-      value,
+    if (raw === null) {
+      return MISSING;
+    }
 
-      /**
-       * 0代表永久
-       */
-      expire: ttl === 0 ? 0 : Date.now() + ttl * 1000,
-    };
+    let cacheValue;
 
     try {
-      this.#cache.setItem(this.#getKey(key), this.#config.serialize(cacheValue));
-
-      return true;
+      cacheValue = this.#config.deserialize(raw);
     } catch (_error) {
-      return false;
+      if (this.#config.failDelete) this.remove(key);
+      return MISSING;
     }
+
+    const { expire } = cacheValue;
+
+    /**
+     * 永不过期或未过期
+     */
+    if (expire === TTL_FOREVER || expire > Date.now()) {
+      return cacheValue;
+    }
+
+    /**
+     * 正常过期，直接删除
+     */
+    this.remove(key);
+
+    return MISSING;
   }
 
   /**
@@ -134,47 +171,49 @@ class Cache {
    * 同时检查过期
    */
   has(key) {
-    return this.get(key) !== null;
+    return this.#getCacheValue(key) !== MISSING;
   }
 
   /**
    * 获取缓存
    */
   get(key, defaultValue = null) {
-    const raw = this.#cache.getItem(this.#getKey(key));
+    const cacheValue = this.#getCacheValue(key);
 
-    if (raw !== null) {
-      try {
-        const cacheValue = this.#config.deserialize(raw);
-
-        /**
-         * 永不过期
-         */
-        if (cacheValue.expire === 0 || cacheValue.expire > Date.now()) {
-          return cacheValue.value;
-        }
-
-        /**
-         * 删除过期缓存
-         */
-        this.delete(key);
-      } catch (_error) {}
+    if (cacheValue !== MISSING) {
+      return cacheValue.value;
     }
 
-    return isFunction(defaultValue) ? defaultValue() : defaultValue;
+    return valueOrCall(defaultValue);
+  }
+
+  /**
+   * 保存缓存
+   */
+  set(key, value, ttl = TTL_FOREVER) {
+    if (!isNonNegativeInteger(ttl)) {
+      throw new TypeError(MESSAGE_TTL_INVALID);
+    }
+
+    try {
+      const cacheValue = {
+        value,
+        expire: ttl === TTL_FOREVER ? TTL_FOREVER : Date.now() + ttl * 1000,
+      };
+
+      this.#setItem(key, cacheValue);
+
+      return true;
+    } catch (_error) {
+      return false;
+    }
   }
 
   /**
    * 删除缓存
    */
-  delete(key) {
-    const realKey = this.#getKey(key);
-
-    if (this.#cache.getItem(realKey) === null) {
-      return false;
-    }
-
-    this.#cache.removeItem(realKey);
+  remove(key) {
+    this.#removeItem(key);
 
     return true;
   }
@@ -183,12 +222,8 @@ class Cache {
    * 清理当前 namespace 缓存
    */
   clear() {
-    const prefix = this.#config.prefix;
-
-    for (const key of Object.keys(this.#cache)) {
-      if (key.startsWith(prefix)) {
-        this.#cache.removeItem(key);
-      }
+    for (const key of this.keys()) {
+      this.remove(key);
     }
 
     return true;
@@ -197,32 +232,31 @@ class Cache {
   /**
    * 缓存不存在时计算并保存
    */
-  remember(key, value, expire = null) {
-    if (this.has(key)) {
-      return this.get(key);
+  remember(key, value, ttl = TTL_FOREVER) {
+    const cacheValue = this.#getCacheValue(key);
+
+    if (cacheValue !== MISSING) {
+      return cacheValue.value;
     }
 
-    const result = isFunction(value) ? value() : value;
+    const result = valueOrCall(value);
 
-    this.set(key, result, expire);
+    this.set(key, result, ttl);
 
     return result;
-  }
-
-  /**
-   * 缓存不存在时计算并永久保存
-   */
-  rememberForever(key, value) {
-    return this.remember(key, value, 0);
   }
 
   /**
    * 自增
    */
   inc(key, step = 1) {
+    if (!isInteger(step)) {
+      throw new TypeError("increment step must be an integer");
+    }
+
     const value = this.get(key);
 
-    if (!isNumber(value)) {
+    if (!isInteger(value)) {
       throw new Error(`Unsupported operand types: ${getType(value)} + int`);
     }
 
@@ -239,6 +273,10 @@ class Cache {
    * 自减
    */
   dec(key, step = 1) {
+    if (!isInteger(step)) {
+      throw new TypeError("decrement step must be an integer");
+    }
+
     return this.inc(key, -step);
   }
 
@@ -250,12 +288,19 @@ class Cache {
   }
 
   /**
+   * 获取标签的缓存标识列表
+   */
+  getTagItems(tag) {
+    return this.get(tag, []);
+  }
+
+  /**
    * 获取后删除
    */
   pull(key, defaultValue = null) {
     const value = this.get(key, defaultValue);
 
-    this.delete(key);
+    this.remove(key);
 
     return value;
   }
@@ -298,19 +343,73 @@ class Cache {
   }
 
   /**
-   * Tag内部使用
+   * 获取缓存剩余有效时间
+   *
+   * 返回值：
+   *   -1：缓存不存在
+   *    0：永久缓存
+   *   >0：剩余有效时间，单位为秒
    */
-  getTagItems(tag) {
-    return this.get(tag, []);
+  ttl(key) {
+    const cacheValue = this.#getCacheValue(key);
+
+    if (cacheValue === MISSING) {
+      return TTL_MISSING;
+    }
+
+    if (cacheValue.expire === TTL_FOREVER) {
+      return TTL_FOREVER;
+    }
+
+    return Math.ceil((cacheValue.expire - Date.now()) / 1000);
+  }
+
+  many(keys) {
+    const result = Object.create(null);
+    for (const key of keys) {
+      result[key] = this.get(key);
+    }
+    return result;
+  }
+
+  setMany(values, ttl = TTL_FOREVER) {
+    let success = true;
+
+    for (const [key, value] of Object.entries(values)) {
+      if (!this.set(key, value, ttl)) {
+        success = false;
+      }
+    }
+
+    return success;
+  }
+
+  /**
+   * 获取当前 namespace 下所有有效缓存 key
+   */
+  keys() {
+    const prefix = this.#config.prefix;
+    const keys = [];
+
+    for (const key of Object.keys(this.#cache)) {
+      if (key.startsWith(prefix)) {
+        keys.push(key.slice(prefix.length));
+      }
+    }
+    return keys;
   }
 }
 
-function isFunction(value) {
-  return typeof value === "function";
+function isInteger(value) {
+  return Number.isInteger(value);
 }
 
-function isNumber(value) {
-  return typeof value === "number" && Number.isFinite(value);
+function isNonNegativeInteger(value) {
+  return isInteger(value) && value >= 0;
+}
+
+function valueOrCall(value) {
+  return typeof value === "function" ? value() : value;
 }
 
 function getType(value) {

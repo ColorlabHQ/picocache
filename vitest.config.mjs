@@ -15,10 +15,10 @@ export default defineConfig({
       reporter: ["text", "html", "lcov"],
 
       thresholds: {
-        lines: 90,
-        functions: 90,
-        statements: 90,
-        branches: 80,
+        lines: 100,
+        functions: 100,
+        statements: 100,
+        branches: 100,
       },
     },
   },

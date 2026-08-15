@@ -19,7 +19,7 @@
 - 🧪 大量测试
 - 📦 极小体积（brotli ≤ 2KB）
 - 🧰 提供语义化、易用的缓存操作 API
-- 💾 保持 JavaScript 数据类型，支持 null、undefined、对象、数组等值的存取
+- 💾 支持常见 JavaScript 数据类型，包括 null、对象和数组等 JSON 可序列化值
 - 🔑 支持自定义缓存前缀
 - 🔒 默认使用 Base64 编码存储，避免缓存数据直接以明文形式存在
 - 🔄 支持自定义序列化和反序列化方法
@@ -41,6 +41,9 @@ npm install picocache
 <script src="https://unpkg.com/picocache@latest/dist/picocache.min.js"></script>
 ```
 
+> [!NOTE]
+> CDN 版本会自动注册全局变量 `picocache`。
+
 ## 快速开始
 
 ## 基本用法
@@ -51,8 +54,8 @@ import cache from "picocache";
 cache.set("name", "jack"); // 设置缓存
 cache.set("name", "jack", 3600); // 设置缓存,3600秒过期
 
-cache.get("name"); //获取缓存数据
-cache.remove("name"); //删除缓存数据
+cache.get("name"); // 获取缓存数据
+cache.remove("name"); // 删除缓存数据
 
 cache("name", "jack"); // 设置缓存
 cache("name", "jack", 3600); // 设置缓存数据,3600秒后过期
@@ -84,7 +87,7 @@ myCache.set("name", "value", 3600);
 | `prefix`      | `string`   | `""`      | 缓存键前缀                             |
 | `serialize`   | `function` | -         | 缓存数据序列化方法                     |
 | `deserialize` | `function` | -         | 缓存数据反序列化方法                   |
-| `fail_delete` | `boolean`  | `true`    | 获取缓存失败后是否强制删除             |
+| `failDelete`  | `boolean`  | `true`    | 获取缓存失败后是否强制删除             |
 
 ## API
 
@@ -98,31 +101,36 @@ cache.set("name", value, 3600);
 
 如果设置成功返回`true` ，否则返回`false`。
 
-### 缓存自增
+### 缓存数值增减
 
-针对数值类型的缓存数据，可以使用自增操作，例如：
+针对计数类型的缓存数据，可以使用 `inc` 和 `dec` 方法进行增减操作。
 
 ```js
-cache.set("name", 1);
-// name自增（步进值为1）
-cache.inc("name");
-// name自增（步进值为3）
-cache.inc("name", 3);
+cache.set("views", 100);
+
+// 增加 1
+cache.inc("views");
+
+// 增加 10
+cache.inc("views", 10);
+
+// 减少 1
+cache.dec("views");
+
+// 减少 10
+cache.dec("views", 10);
 ```
+
+`inc` 和 `dec` 主要用于维护计数器类型的数据，例如：
+
+- 页面浏览次数
+- 用户登录次数
+- 文件下载次数
+- 库存数量
+- 请求限流次数
 
 > [!WARNING]
-> 只能对数字自增和自减操作。
-
-### 缓存自减
-
-针对数值类型的缓存数据，可以使用自减操作，例如：
-
-```js
-// name自减（步进值为1）
-cache.dec("name");
-// name自减（步进值为3）
-cache.dec("name", 3);
-```
+> `inc` 和 `dec` 用于整数计数器操作，仅支持整数类型的缓存值，且步进值必须为整数。
 
 ### 获取缓存
 
@@ -142,13 +150,15 @@ cache.get("name", "");
 
 表示如果`name`值不存在，则返回空字符串。
 
-支持传入闭包作为默认值获取
+支持传入函数作为默认值：
 
 ```js
-cache.get("name", function () {
-  // 动态返回数据
+cache.get("name", () => {
+  return generateName();
 });
 ```
+
+当缓存不存在时，函数会被调用，并使用返回值作为默认值。
 
 ### 追加一个缓存数据
 
@@ -175,7 +185,7 @@ cache.remove("name");
 cache.pull("name");
 ```
 
-如果`name`值不存在，则返回`null`，支持指定默认值
+如果`name`值不存在，则返回`null`，支持指定默认值:
 
 ```js
 cache.pull("name", "");
@@ -201,7 +211,7 @@ cache.remember("start_time", Date.now());
 cache.remember("start_time", () => Date.now());
 ```
 
-第三个参数可以设置缓存有效期，单位为秒：
+第三个参数用于设置缓存 `TTL`，单位为秒。
 
 ```js
 cache.remember("token", getToken, 3600);
@@ -225,7 +235,7 @@ cache.tag('tag')->clear();
 cache.get("name1");
 ```
 
-并支持同时指定多个缓存标签操作
+并支持同时指定多个缓存标签操作:
 
 ```js
 cache.tag(['tag1', 'tag2'])->set('name1', 'value1');
@@ -235,29 +245,32 @@ cache.tag(['tag1', 'tag2'])->set('name2', 'value2');
 cache.tag(['tag1','tag2'])->clear();
 ```
 
-可以追加某个缓存标识到标签
+可以追加某个缓存标识到标签:
 
 ```js
 cache.tag('tag')->append('name3');
 ```
 
-获取标签的缓存标识列表
+获取标签的缓存标识列表:
 
 ```js
 cache.getTagItems("tag");
 ```
 
-### 获取缓存对象
+### 获取底层存储对象
 
-如果你想获取当前的原始缓存对象可以通过`handler()`方法
+如果需要访问 `picocache` 使用的原生存储对象，可以通过 `handler()` 方法获取。
 
 ```js
-// 原始缓存对象
-const localStorage = cache.handler();
+const storage = cache.handler();
 
-// 然后您可以调用缓存对象中原本的方法
-localStorage.getItem("bgcolor");
+// 调用原生 Storage API
+storage.getItem("key");
+storage.setItem("key", "value");
+storage.removeItem("key");
 ```
+
+`handler()` 返回当前实例对应的原生 `Storage` 对象，例如 `localStorage` 或 `sessionStorage`。
 
 ### 切换缓存类型
 

@@ -63,7 +63,6 @@ const Default = {
 
 class Cache {
   #cache;
-
   #config;
 
   /**

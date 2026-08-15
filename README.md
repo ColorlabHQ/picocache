@@ -199,27 +199,32 @@ cache.clear();
 
 ### 不存在则写入缓存数据后返回
 
-`remember` 会先从缓存中获取数据。如果缓存不存在，则计算并保存数据后返回。
+如果 `theme` 缓存数据不存在，则会设置 `dark` 为当前主题:
 
 ```js
-cache.remember("start_time", Date.now());
+const theme = cache.remember("theme", "dark");
+
+console.log(theme);
+// "dark"
 ```
 
-第二个参数也可以传入函数，仅在缓存不存在时执行：
+第二个参数也可以传入函数：
 
 ```js
-cache.remember("start_time", () => Date.now());
+cache.remember("theme", () =>
+  window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light",
+);
 ```
 
-第三个参数用于设置缓存 `TTL`，单位为秒。
+第三个参数用于设置缓存 `TTL`，单位为秒：
 
 ```js
-cache.remember("token", getToken, 3600);
+cache.remember("token", () => crypto.randomUUID(), 3600);
 ```
 
 ### 缓存标签
 
-支持给缓存数据打标签，例如：
+支持给缓存数据打标签：
 
 ```js
 cache.tag('tag')->set('name1','value1');
@@ -229,10 +234,10 @@ cache.tag('tag')->set('name2','value2');
 cache.tag('tag')->clear();
 ```
 
-缓存标签不会改变缓存的读取操作，所以获取方式依然是：
+缓存标签不会改变缓存的读取操作：
 
 ```js
-cache.get("name1");
+cache.get("name1"); // "value1"
 ```
 
 并支持同时指定多个缓存标签操作:
@@ -274,7 +279,7 @@ storage.removeItem("key");
 
 ### 切换缓存类型
 
-没有指定缓存类型的话，默认是[选项](#options) `type` 的默认值，可以动态切换
+没有指定缓存类型的话，默认是[选项](#options) `type` 的默认值，可以动态切换:
 
 ```js
 // 使用 localStorage 缓存
@@ -285,14 +290,14 @@ cache.get('name');
 cache.store('sesson')->set('name','value',3600);
 cache.store('sesson')->get('name');
 
-// 切换到localStorage 缓存
+// 切换到 localStorage 缓存
 cache.store('local')->set('name','value',3600);
 cache.store('local')->get('name');
 ```
 
 ### 自定义序列化和反序列化方法
 
-`picocache` 默认使用 `JSON.stringify()` 和 `JSON.parse()`处理缓存数据，并使用 `Base64` 对序列化结果进行编码。如果你不想使用 `Base64` 编码，你可以通过 `serialize` 和 `deserialize` 覆盖默认行为。
+`picocache` 默认会对缓存数据进行 `Base64` 编码，你可以通过 `serialize` 和 `deserialize` 覆盖默认行为。
 
 例如，直接使用 JSON：
 
@@ -303,7 +308,7 @@ const myCache = cache.create({
 });
 ```
 
-JSON 足以满足大多数缓存场景，但它只能处理有限的 JavaScript 数据类型。如果需要缓存 `Date`、`Map`、`Set` 等更复杂的数据，可以通过 `serialize` 和 `deserialize` 接入其他序列化方案。
+JSON 足以满足大多数缓存场景，但它只能处理有限的 JavaScript 数据类型。如果需要缓存 `Date`、`Map`、`Set` 等更复杂的数据，可以自行接入其他序列化方案。
 
 例如，可以使用 [structured-clone-es](https://github.com/antfu-collective/structured-clone-es) 等库扩展可序列化的数据类型:
 

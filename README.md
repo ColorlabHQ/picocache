@@ -307,7 +307,7 @@ cache.setMany(
 );
 ```
 
-返回 `true` 表示所有缓存写入成功；返回 `false` 表示至少一个缓存写入失败。
+返回 `true` 表示所有缓存写入成功，返回 `false` 表示至少一个缓存写入失败。
 
 ### 查看剩余有效时间
 
@@ -328,7 +328,7 @@ cache.ttl("token");
 
 ### 获取缓存数量
 
-可以通过 `length` 获取当前缓存实例中的有效缓存数量。
+可以通过 `length` 属性获取当前缓存实例中的有效缓存数量。
 
 ```js
 cache.set("name", "jack");
@@ -352,7 +352,7 @@ cache.keys();
 
 ### 获取底层存储对象
 
-如果需要访问 `picocache` 使用的原生存储对象，可以通过 `handler()` 方法获取。
+如果需要访问 `picocache` 当前实例所使用的原生存储对象，可以通过 `handler()` 方法获取。
 
 ```js
 const storage = cache.handler();

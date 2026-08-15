@@ -262,6 +262,94 @@ cache.tag('tag')->append('name3');
 cache.getTagItems("tag");
 ```
 
+### 批量获取缓存
+
+使用 `many()` 可以一次获取多个缓存：
+
+```js
+cache.set("name", "jack");
+cache.set("age", 18);
+
+cache.many(["name", "age", "email"]);
+
+// {
+//   name: "jack",
+//   age: 18,
+//   email: null
+// }
+```
+
+不存在的缓存会返回默认值 `null`。
+
+### 批量设置缓存
+
+使用 `setMany()` 可以一次写入多个缓存：
+
+```js
+cache.setMany({
+  name: "jack",
+  age: 18,
+  active: true,
+});
+```
+
+也可以统一设置 `TTL`：
+
+```js
+cache.setMany(
+  {
+    token: "xxxx",
+    user: {
+      id: 1,
+    },
+  },
+  3600,
+);
+```
+
+返回 `true` 表示所有缓存写入成功；返回 `false` 表示至少一个缓存写入失败。
+
+### 查看剩余有效时间
+
+可以使用 `ttl()` 查看缓存剩余时间：
+
+```js
+cache.set("token", "abc", 3600);
+
+cache.ttl("token");
+// 3600
+```
+
+| 返回值 | 说明                 |
+| ------ | -------------------- |
+| `-1`   | 缓存不存在或已经过期 |
+| `0`    | 永久缓存             |
+| `>0`   | 剩余有效时间（秒）   |
+
+### 获取缓存数量
+
+可以通过 `length` 获取当前缓存实例中的有效缓存数量。
+
+```js
+cache.set("name", "jack");
+cache.set("age", 18);
+
+console.log(cache.length);
+// 2
+```
+
+### 获取所有缓存 Key
+
+可以通过 `keys()` 获取当前缓存实例中的所有有效缓存键。
+
+```js
+cache.set("name", "jack");
+cache.set("age", 18);
+
+cache.keys();
+// ["name", "age"]
+```
+
 ### 获取底层存储对象
 
 如果需要访问 `picocache` 使用的原生存储对象，可以通过 `handler()` 方法获取。

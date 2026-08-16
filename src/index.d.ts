@@ -1,6 +1,13 @@
 export type CacheType = "local" | "session";
 
 /**
+ * 永不过期。
+ *
+ * 等价于 ttl = 0。
+ */
+export declare const TTL_FOREVER: 0;
+
+/**
  * 缓存配置。
  */
 export interface CacheConfig {
@@ -12,18 +19,20 @@ export interface CacheConfig {
   type?: CacheType;
 
   /**
-   * 默认过期时间，单位为秒。
+   * 默认过期时间。
+   *
+   * 单位：秒
    *
    * 0 表示永不过期。
    *
    * @default 0
    */
-  expire?: number;
+  ttl?: number;
 
   /**
    * 缓存 key 前缀。
    *
-   * 用于隔离不同应用的缓存。
+   * 用于隔离不同应用缓存。
    *
    * @default ""
    */
@@ -38,6 +47,13 @@ export interface CacheConfig {
    * 反序列化缓存数据。
    */
   deserialize?: (value: string) => unknown;
+
+  /**
+   * 获取缓存失败后是否自动删除异常数据。
+   *
+   * @default true
+   */
+  failDelete?: boolean;
 }
 
 /**
@@ -47,7 +63,7 @@ export interface TagSet {
   /**
    * 设置缓存并加入当前标签。
    */
-  set<T = unknown>(key: string, value: T, expire?: number | null): boolean;
+  set<T = unknown>(key: string, value: T, ttl?: number): boolean;
 
   /**
    * 将缓存 key 加入当前标签。
@@ -65,6 +81,11 @@ export interface TagSet {
  */
 export interface Cache {
   /**
+   * 当前 namespace 下有效缓存数量。
+   */
+  readonly length: number;
+
+  /**
    * 创建新的缓存实例。
    */
   create(config?: CacheConfig): Cache;
@@ -73,16 +94,6 @@ export interface Cache {
    * 获取原生 Storage 对象。
    */
   handler(): Storage;
-
-  /**
-   * 保存缓存。
-   *
-   * @param key 缓存 key
-   * @param value 缓存值
-   * @param expire 过期时间，单位为秒。
-   *               null 表示使用默认过期时间。
-   */
-  set<T = unknown>(key: string, value: T, expire?: number | null): boolean;
 
   /**
    * 判断缓存是否存在。
@@ -94,29 +105,29 @@ export interface Cache {
   /**
    * 获取缓存。
    *
-   * 如果缓存不存在，则返回 defaultValue。
+   * 如果缓存不存在，则返回默认值。
    */
   get<T = unknown>(key: string, defaultValue?: T | (() => T)): T | null;
 
   /**
-   * 删除缓存。
+   * 保存缓存。
    */
-  delete(key: string): boolean;
+  set<T = unknown>(key: string, value: T, ttl?: number): boolean;
 
   /**
-   * 清理当前 namespace 下的所有缓存。
+   * 删除缓存。
+   */
+  remove(key: string): boolean;
+
+  /**
+   * 清理当前 namespace 下所有缓存。
    */
   clear(): boolean;
 
   /**
    * 缓存不存在时计算并保存。
    */
-  remember<T>(key: string, value: T | (() => T), expire?: number | null): T;
-
-  /**
-   * 缓存不存在时计算并永久保存。
-   */
-  rememberForever<T>(key: string, value: T | (() => T)): T;
+  remember<T>(key: string, value: T | (() => T), ttl?: number): T;
 
   /**
    * 自增。
@@ -134,6 +145,13 @@ export interface Cache {
   tag(tag: string | string[]): TagSet;
 
   /**
+   * 获取标签关联的缓存 key。
+   *
+   * 内部供 TagSet 使用。
+   */
+  getTagItems(tag: string): string[];
+
+  /**
    * 获取缓存后删除。
    */
   pull<T = unknown>(key: string, defaultValue?: T | (() => T)): T | null;
@@ -149,21 +167,47 @@ export interface Cache {
   store(type: CacheType): Cache;
 
   /**
-   * 获取标签关联的缓存 key。
+   * 获取缓存剩余有效时间。
    *
-   * 此方法主要供 TagSet 内部使用。
+   * 返回：
+   *
+   * -1: 不存在
+   * 0: 永不过期
+   * >0: 剩余秒数
    */
-  getTagItems<T = string>(tag: string): T[];
+  ttl(key: string): number;
+
+  /**
+   * 批量获取缓存。
+   */
+  many<T = unknown>(keys: string[]): Record<string, T | null>;
+
+  /**
+   * 批量设置缓存。
+   */
+  setMany<T = unknown>(values: Record<string, T>, ttl?: number): boolean;
+
+  /**
+   * 获取当前 namespace 下所有有效缓存 key。
+   */
+  keys(): string[];
 }
 
 /**
- * 默认缓存实例。
+ * 默认缓存实例函数。
  *
- * 同时支持函数调用和 Cache 实例方法。
+ * 支持：
+ *
+ * cache()
+ * cache(key)
+ * cache(key, value)
+ * cache(key, null)
+ *
+ * 等函数调用方式。
  */
 export interface CacheFunction extends Cache {
   /**
-   * 不传参数时返回默认缓存实例。
+   * 返回默认 Cache 实例。
    */
   (): Cache;
 
@@ -184,7 +228,7 @@ export interface CacheFunction extends Cache {
   /**
    * 保存缓存。
    */
-  <T = unknown>(key: string, value: T, expire?: number | null): boolean;
+  <T = unknown>(key: string, value: T, ttl?: number): boolean;
 }
 
 /**

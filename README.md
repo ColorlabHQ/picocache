@@ -103,7 +103,7 @@ cache.set("name", value, 3600);
 
 ### 计数器增减操作
 
-对于计数器类型的缓存数据，可以使用 `inc` 和 `dec` 方法执行自增和自减操作。
+对于计数器类型的缓存数据，可以使用 `inc` 和 `dec` 方法快速执行自增和自减操作。
 
 ```js
 cache.set("views", 100);
@@ -250,16 +250,27 @@ cache.tag(['tag1', 'tag2'])->set('name2', 'value2');
 cache.tag(['tag1','tag2'])->clear();
 ```
 
-可以追加某个缓存标识到标签:
+可以追加某个缓存标志(key)到标签:
 
 ```js
 cache.tag('tag')->append('name3');
 ```
 
-获取标签的缓存标识列表:
+获取标签的缓存标志列表:
 
 ```js
+cache.tag('tag')->set('name1', 'value1');
+cache.tag('tag')->set('name2', 'value2');
+cache.tag('tag')->append('name3');
+
 cache.getTagItems("tag");
+
+// 返回:
+// [
+//   "name1",
+//   "name2",
+//   "name3"
+// ]
 ```
 
 ### 批量获取缓存
@@ -314,10 +325,17 @@ cache.setMany(
 可以使用 `ttl()` 查看缓存剩余时间：
 
 ```js
-cache.set("token", "abc", 3600);
+cache.set("theme", "light");
+cache.ttl("theme");
+// 0
 
+cache.set("token", "abc", 3600);
 cache.ttl("token");
 // 3600
+
+cache.clear();
+cache.ttl("theme");
+// -1
 ```
 
 | 返回值 | 说明                 |
@@ -352,7 +370,7 @@ cache.keys();
 
 ### 获取底层存储对象
 
-如果需要访问 `picocache` 当前实例所使用的原生存储对象，可以通过 `handler()` 方法获取。
+如果需要访问 `picocache` 当前实例所使用的原生 `Storage` 对象，例如 `localStorage` 或 `sessionStorage`，可以通过 `handler()` 方法获取。
 
 ```js
 const storage = cache.handler();
@@ -362,8 +380,6 @@ storage.getItem("key");
 storage.setItem("key", "value");
 storage.removeItem("key");
 ```
-
-`handler()` 返回当前实例对应的原生 `Storage` 对象，例如 `localStorage` 或 `sessionStorage`。
 
 ### 切换缓存类型
 
